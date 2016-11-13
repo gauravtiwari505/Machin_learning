@@ -2,7 +2,7 @@ Hello everyone,
 
 Welcome to my github repository for the course project of practical machine learning.
 
-You can view the published html file on Rpubs by clicking [here]()
+You can view the published html file on Rpubs by clicking [here](http://rpubs.com/GauravTiwari1/226594)
 
 Please find below the links to the files.
 
