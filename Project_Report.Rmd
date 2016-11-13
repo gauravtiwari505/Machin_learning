@@ -140,6 +140,9 @@ write_results <- function(a) {
 }
 
 # create prediction files to submit
+# Also writing down the results below for easy visibilty
 write_results(prediction)
+prediction = as.data.frame(prediction)
+prediction
 ```
 

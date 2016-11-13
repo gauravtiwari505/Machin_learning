@@ -123,48 +123,53 @@ $(document).ready(function () {
 </div>
 
 
-<div id="practical-machine-learning---course-project" class="section level1">
-<h1>Practical Machine Learning - Course Project</h1>
+<div id="prediction-assignment-writeup---practical-machine-learning" class="section level1">
+<h1>Prediction Assignment Writeup - Practical Machine Learning</h1>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
-<p>For this project, we are given data from accelerometers on the belt, forearm, arm, and dumbell of 6 research study participants. Our training data consists of accelerometer data and a label identifying the quality of the activity the participant was doing. Our testing data consists of accelerometer data without the identifying label. Our goal is to predict the labels for the test set observations.</p>
-<p>Below is the code I used when creating the model, estimating the out-of-sample error, and making predictions. I also include a description of each step of the process.</p>
+<p>One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, we are given data from accelerometers on the belt, forearm, arm, and dumbell of 6 research study participants.</p>
+<p>Our training data consists of accelerometer data and a label identifying the quality of the activity the participant was doing. Our testing data consists of accelerometer data without the identifying label. Our goal is to predict the labels for the test set observations.</p>
+<p>We will now go through the process below of creating a model, estimating the out of sample error and finally making the predictions for the test set observations.</p>
+<p>At each step, I will try to describe the code, so that it induces more clarity and better readability.</p>
 </div>
 <div id="data-preparation" class="section level2">
 <h2>Data Preparation</h2>
-<p>I load the caret package, and read in the training and testing data:</p>
+<p>First, we load the caret package, and read in the training and testing data csv files:</p>
 <pre class="r"><code>library(caret)
-ptrain &lt;- read.csv(&quot;Data/pml-training.csv&quot;)
-ptest &lt;- read.csv(&quot;Data/pml-testing.csv&quot;)</code></pre>
-<p>Because I want to be able to estimate the out-of-sample error, I randomly split the full training data (ptrain) into a smaller training set (ptrain1) and a validation set (ptrain2):</p>
-<pre class="r"><code>set.seed(123)
-inTrain &lt;- createDataPartition(y=ptrain$classe, p=0.7, list=F)
-ptrain1 &lt;- ptrain[inTrain, ]
-ptrain2 &lt;- ptrain[-inTrain, ]</code></pre>
-<p>I am now going to reduce the number of features by removing variables with nearly zero variance, variables that are almost always NA, and variables that don’t make intuitive sense for prediction. Note that I decide which ones to remove by analyzing ptrain1, and perform the identical removals on ptrain2:</p>
-<pre class="r"><code># remove variables with nearly zero variance
-nzv &lt;- nearZeroVar(ptrain1)
-ptrain1 &lt;- ptrain1[, -nzv]
-ptrain2 &lt;- ptrain2[, -nzv]
+training &lt;- read.csv(&quot;Data/pml-training.csv&quot;)
+testing &lt;- read.csv(&quot;Data/pml-testing.csv&quot;)</code></pre>
+<p>Next, we will randomly split the full training data into a smaller training (training1) and a validation subset (training2) so that we are able to estimate the out of sample errors.</p>
+<pre class="r"><code>#Setting the seed for reproducability
+set.seed(123)
+inTrain &lt;- createDataPartition(y=training$classe, p=0.7, list=F)
+training1 &lt;- training[inTrain, ]
+training2 &lt;- training[-inTrain, ]</code></pre>
+<p>The next step is to reduce the number of features by removing variables with 1. Nearly zero variance. 2. Variables that are almost always NA. 3. Variables that don’t make intuitive sense for prediction.</p>
+<p>The process is to do the analysis on training1 dataset and remove it from both training1 and training2 dataset based on training1 analysis.</p>
+<p>In addition, we are going to trim the dataset so as to remove the variables that we dont need for prediction based on intuitive sense. So the first 5 columns are removed from both the training1 and training2 dataset.</p>
+<pre class="r"><code># Nearly zero variance
+near_zero &lt;- nearZeroVar(training1)
+training1 &lt;- training1[, -near_zero]
+training2 &lt;- training2[, -near_zero]
 
 # remove variables that are almost always NA
-mostlyNA &lt;- sapply(ptrain1, function(x) mean(is.na(x))) &gt; 0.95
-ptrain1 &lt;- ptrain1[, mostlyNA==F]
-ptrain2 &lt;- ptrain2[, mostlyNA==F]
+mostlyNA &lt;- sapply(training1, function(x) mean(is.na(x))) &gt; 0.95
+training1 &lt;- training1[, mostlyNA==F]
+training2 &lt;- training2[, mostlyNA==F]
 
 # remove variables that don't make intuitive sense for prediction (X, user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp), which happen to be the first five variables
-ptrain1 &lt;- ptrain1[, -(1:5)]
-ptrain2 &lt;- ptrain2[, -(1:5)]</code></pre>
+training1 &lt;- training1[, -(1:5)]
+training2 &lt;- training2[, -(1:5)]</code></pre>
 </div>
 </div>
-<div id="model-building" class="section level1">
-<h1>Model Building</h1>
-<p>I decided to start with a Random Forest model, to see if it would have acceptable performance. I fit the model on ptrain1, and instruct the “train” function to use 3-fold cross-validation to select optimal tuning parameters for the model.</p>
+<div id="building-the-model" class="section level1">
+<h1>Building the Model</h1>
+<p>Based on past experience with dataset of these type, I decided to start with a Random Forest Model. The goal was to see if it provides an acceptable performance. The process is to first fit the model on training1 and then follow a 3-fold cross validation to optimize the model using the “train” function.</p>
 <pre class="r"><code># instruct train to use 3-fold CV to select optimal tuning parameters
 fitControl &lt;- trainControl(method=&quot;cv&quot;, number=3, verboseIter=F)
 
-# fit model on ptrain1
-fit &lt;- train(classe ~ ., data=ptrain1, method=&quot;rf&quot;, trControl=fitControl)</code></pre>
+# fit model on training1
+fit &lt;- train(classe ~ ., data=training1, method=&quot;rf&quot;, trControl=fitControl)</code></pre>
 <pre><code>## Loading required package: randomForest</code></pre>
 <pre><code>## randomForest 4.6-12</code></pre>
 <pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
@@ -190,16 +195,16 @@ fit$finalModel</code></pre>
 ## C    0    3 2393    0    0 0.0012520868
 ## D    0    0    8 2243    1 0.0039964476
 ## E    0    0    0    3 2522 0.0011881188</code></pre>
-<p>I see that it decided to use 500 trees and try 27 variables at each split.</p>
+<p>As we can see, that the model decided to use 27 variables and 500 trees at each split.</p>
 </div>
-<div id="model-evaluation-and-selection" class="section level1">
-<h1>Model Evaluation and Selection</h1>
-<p>Now, I use the fitted model to predict the label (“classe”) in ptrain2, and show the confusion matrix to compare the predicted versus the actual labels:</p>
-<pre class="r"><code># use model to predict classe in validation set (ptrain2)
-preds &lt;- predict(fit, newdata=ptrain2)
+<div id="model-evaluation-selection" class="section level1">
+<h1>Model Evaluation &amp; Selection</h1>
+<p>Based on our previous training, we can now use the fitted model to predict the “classe” variable in training2 dataset and check the results by using a confusion matrix so that we can get a comparison of the predicted vs the actual lables</p>
+<pre class="r"><code># use model to predict classe in validation set (training2)
+prediction &lt;- predict(fit, newdata=training2)
 
 # show confusion matrix to get estimate of out-of-sample error
-confusionMatrix(ptrain2$classe, preds)</code></pre>
+confusionMatrix(training2$classe, prediction)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
@@ -231,50 +236,50 @@ confusionMatrix(ptrain2$classe, preds)</code></pre>
 ## Detection Rate         0.2845   0.1930   0.1737   0.1630   0.1839
 ## Detection Prevalence   0.2845   0.1935   0.1743   0.1638   0.1839
 ## Balanced Accuracy      0.9991   0.9979   0.9976   0.9995   0.9995</code></pre>
-<p>The accuracy is 99.8%, thus my predicted accuracy for the out-of-sample error is 0.2%.</p>
-<p>This is an excellent result, so rather than trying additional algorithms, I will use Random Forests to predict on the test set.</p>
+<p>As we can see, the accuracy for this model is 99.8%, giving an out of sample error of just 0.2%.</p>
+<p>This is a fairly acceptable result in my opinion, so rather than trying additional algorithms, I will go ahead with the Random Forests to do the same prediction on the test set.</p>
 </div>
-<div id="re-training-the-selected-model" class="section level1">
-<h1>Re-training the Selected Model</h1>
-<p>Before predicting on the test set, it is important to train the model on the full training set (ptrain), rather than using a model trained on a reduced training set (ptrain1), in order to produce the most accurate predictions. Therefore, I now repeat everything I did above on ptrain and ptest:</p>
-<pre class="r"><code># remove variables with nearly zero variance
-nzv &lt;- nearZeroVar(ptrain)
-ptrain &lt;- ptrain[, -nzv]
-ptest &lt;- ptest[, -nzv]
+<div id="application-of-selected-model-on-training" class="section level1">
+<h1>Application of selected model on training</h1>
+<p>To have the most accurate predictions, I decided to train the model on the complete training dataset. This way we will have better prediction rather than what we would have achieved from just the training1 dataset. So we follow the same procedures as above for the entire training dataset.</p>
+<pre class="r"><code># remove variables with nearly zero variance for the entire training dataset
+near_zero &lt;- nearZeroVar(training)
+training &lt;- training[, -near_zero]
+testing &lt;- testing[, -near_zero]
 
 # remove variables that are almost always NA
-mostlyNA &lt;- sapply(ptrain, function(x) mean(is.na(x))) &gt; 0.95
-ptrain &lt;- ptrain[, mostlyNA==F]
-ptest &lt;- ptest[, mostlyNA==F]
+mostlyNA &lt;- sapply(training, function(x) mean(is.na(x))) &gt; 0.95
+training &lt;- training[, mostlyNA==F]
+testing &lt;- testing[, mostlyNA==F]
 
 # remove variables that don't make intuitive sense for prediction (X, user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp), which happen to be the first five variables
-ptrain &lt;- ptrain[, -(1:5)]
-ptest &lt;- ptest[, -(1:5)]
+training &lt;- training[, -(1:5)]
+testing &lt;- testing[, -(1:5)]
 
-# re-fit model using full training set (ptrain)
+# re-fit model using full training set (training)
 fitControl &lt;- trainControl(method=&quot;cv&quot;, number=3, verboseIter=F)
-fit &lt;- train(classe ~ ., data=ptrain, method=&quot;rf&quot;, trControl=fitControl)</code></pre>
+fit &lt;- train(classe ~ ., data=training, method=&quot;rf&quot;, trControl=fitControl)</code></pre>
 </div>
-<div id="making-test-set-predictions" class="section level1">
-<h1>Making Test Set Predictions</h1>
-<p>Now, I use the model fit on ptrain to predict the label for the observations in ptest, and write those predictions to individual files:</p>
+<div id="predicting-on-testing-dataset" class="section level1">
+<h1>Predicting on testing dataset</h1>
+<p>Finally, we will use the fitted model to predict the classe varible on the testing dataset. We will create a function that writes the predictions for each cases to individual text files.</p>
 <pre class="r"><code># predict on test set
-preds &lt;- predict(fit, newdata=ptest)
+prediction &lt;- predict(fit, newdata=testing)
 
 # convert predictions to character vector
-preds &lt;- as.character(preds)
+prediction &lt;- as.character(prediction)
 
 # create function to write predictions to files
-pml_write_files &lt;- function(x) {
-    n &lt;- length(x)
+write_results &lt;- function(a) {
+    n &lt;- length(a)
     for(i in 1:n) {
         filename &lt;- paste0(&quot;Prediction/problem_id_&quot;, i, &quot;.txt&quot;)
-        write.table(x[i], file=filename, quote=F, row.names=F, col.names=F)
+        write.table(a[i], file=filename, quote=F, row.names=F, col.names=F)
     }
 }
 
 # create prediction files to submit
-pml_write_files(preds)</code></pre>
+write_results(prediction)</code></pre>
 </div>
 
 
